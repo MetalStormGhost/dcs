@@ -79,7 +79,10 @@ class Vehicle(Unit):
     def load_from_dict(self, d):
         super(Vehicle, self).load_from_dict(d)
         self.player_can_drive = d["playerCanDrive"]
-        self.transportable = d["transportable"]
+        try:
+            self.transportable = d["transportable"]
+        except KeyError:
+            self.transportable = {"transportable": False}
 
     def dict(self):
         d = super(Vehicle, self).dict()
@@ -105,7 +108,10 @@ class Ship(Unit):
     def load_from_dict(self, d):
         super(Ship, self).load_from_dict(d)
         self.frequency = d.get("frequency", self.frequency)
-        self.transportable = d["transportable"]
+        try:
+            self.transportable = d["transportable"]
+        except KeyError:
+            self.transportable = {"transportable": False}
 
     def dict(self):
         d = super(Ship, self).dict()
