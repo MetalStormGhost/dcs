@@ -1485,7 +1485,7 @@ class Option(Task):
         self.params = {
             "action": {"id": "Option", "params": {"name": self.Key}}
         }
-        if value:
+        if value is not None:
             self.params["action"]["params"]["value"] = value
 
     @property
@@ -1588,12 +1588,476 @@ class OptChaffFlareUsing(Option):
 
 
 class OptFormation(Option):
+    """Formations changed data structures during DCS development.  Use the static methods to build the desired formation."""
+
     Key = 5
 
-    # TODO missing option enums
+    class Values(IntEnum):
+        """Values are for Rotary or Fixed Wing only.  Rotary values are preceded by Rotary."""
+        # RotaryWedge has no VariantIndex or zInverse field.
+        RotaryWedge = 8
+        RotaryEchelonRightSmall = 589825
+        RotaryEchelonRightMedium = 583826
+        RotaryEchelonRightLarge = 589827
+        RotaryEchelonLeftSmall = 590081
+        RotaryEchelonLeftMedium = 590082
+        RotaryEchelonLeftLarge = 590083
+        RotaryFrontRightSmall = 655361
+        RotaryFrontRightMedium = 655362
+        RotaryFrontLeftSmall = 655617
+        RotaryFrontLeftMedium = 655618
+        # RotaryColumn has no VariantIndex or zInverse field.
+        RotaryColumn = 720896
 
-    def __init__(self, value=None):
-        super(OptFormation, self).__init__(value)
+        # Aircraft Values below
+        LineAbreastClose = 65537
+        LineAbreastOpen = 65538
+        LineAbreastGroupClose = 65539
+        TrailClose = 131073
+        TrailOpen = 131074
+        TrailGroupClose = 131075
+        WedgeClose = 196609
+        WedgeOpen = 196610
+        WedgeGroupClose = 196611
+        EchelonRightClose = 262145
+        EchelonRightOpen = 262146
+        EchelonRightGroupClose = 262147
+        EchelonLeftClose = 327681
+        EchelonLeftOpen = 327682
+        EchelonLeftGroupClose = 327683
+        FingerFourClose = 393217
+        FingerFourOpen = 393218
+        FingerFourGroupClose = 393219
+        SpreadFourClose = 458753
+        SpreadFourOpen = 458754
+        SpreadFourGroupClose = 458755
+        WW2_BomberElementClose = 786433
+        WW2_BomberElementOpen = 786434
+        # WW2: Bomber Height Seperation has no VariantIndex field.
+        WW2_BomberElementHeightSeperation = 851968
+        WW2_FighterVicClose = 917505
+        WW2_FighterVicOpen = 917506
+        ModernBomberFormationClose = 1114113
+        ModernBomberFormationOpen = 1114114
+
+    class FormationIndex(IntEnum):
+        """Formations are for Aircraft only (not helicopters) unless explicitly stated otherwise."""
+        LineAbreast = 1
+        Trail = 2
+        Wedge = 3
+        EchelonRight = 4
+        EchelonLeft = 5
+        FingerFour = 6
+        SpreadFour = 7
+        RotaryWedge = 8
+        RotaryEchelon = 9
+        RotaryFront = 10
+        RotaryColumn = 11
+        WW2_BomberElement = 12
+        WW2_BomberElementHeightSeperation = 13
+        WW2_FighterVic = 14
+        ModernBomberFormation = 17
+
+    class VariantIndex(IntEnum):
+        """The distance that the formation is spread apart is dependent on the formation index.
+        Ignore text for rotaries, its always small(1)-medium(2)-large(3)."""
+        Close = 1
+        Open = 2
+        GroupClose = 3
+
+    class ZInverse(IntEnum):
+        """Only used by rotaries.  Combines with FormationIndex to vary left/right."""
+        Right = 0
+        Left = 1
+
+    def __init__(
+        self,
+        value: Values = Values.EchelonRightOpen,
+        formationIndex: FormationIndex = FormationIndex.EchelonRight,
+        variantIndex: Optional[VariantIndex] = VariantIndex.Open,
+        zInverse: Optional[ZInverse] = None
+    ):
+
+        super(OptFormation, self).__init__(value.value)
+        self.params["action"]["params"]["formationIndex"] = formationIndex.value
+        if variantIndex is not None:
+            self.params["action"]["params"]["variantIndex"] = variantIndex.value
+        if zInverse is not None:
+            self.params["action"]["params"]["zInverse"] = zInverse.value
+
+    @property
+    def formation_index(self) -> Union[str, int, bool]:
+        return self.params["action"]["params"]["formationIndex"]
+
+    @property
+    def variant_index(self) -> Optional[Union[str, int, bool]]:
+        return self.params["action"]["params"]["variantIndex"]
+
+    @property
+    def z_inverse(self) -> Optional[Union[str, int, bool]]:
+        return self.params["action"]["params"]["zInverse"]
+
+    # Rotary formation constructors:
+    @staticmethod
+    def rotary_wedge():
+        return OptFormation(
+            value=OptFormation.Values.RotaryWedge,
+            formationIndex=OptFormation.FormationIndex.RotaryWedge,
+            zInverse=None,
+            variantIndex=None
+        )
+
+    @staticmethod
+    def rotary_eschelon_right_small():
+        return OptFormation(
+            value=OptFormation.Values.RotaryEchelonRightSmall,
+            formationIndex=OptFormation.FormationIndex.RotaryEchelon,
+            zInverse=OptFormation.ZInverse.Right,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def rotary_eschelon_right_medium():
+        return OptFormation(
+            value=OptFormation.Values.RotaryEchelonRightMedium,
+            formationIndex=OptFormation.FormationIndex.RotaryEchelon,
+            zInverse=OptFormation.ZInverse.Right,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def rotary_eschelon_right_large():
+        return OptFormation(
+            value=OptFormation.Values.RotaryEchelonRightLarge,
+            formationIndex=OptFormation.FormationIndex.RotaryEchelon,
+            zInverse=OptFormation.ZInverse.Right,
+            variantIndex=OptFormation.VariantIndex.GroupClose
+        )
+
+    @staticmethod
+    def rotary_eschelon_left_small():
+        return OptFormation(
+            value=OptFormation.Values.RotaryEchelonLeftSmall,
+            formationIndex=OptFormation.FormationIndex.RotaryEchelon,
+            zInverse=OptFormation.ZInverse.Left,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def rotary_eschelon_left_medium():
+        return OptFormation(
+            value=OptFormation.Values.RotaryEchelonLeftMedium,
+            formationIndex=OptFormation.FormationIndex.RotaryEchelon,
+            zInverse=OptFormation.ZInverse.Left,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def rotary_eschelon_left_large():
+        return OptFormation(
+            value=OptFormation.Values.RotaryEchelonLeftLarge,
+            formationIndex=OptFormation.FormationIndex.RotaryEchelon,
+            zInverse=OptFormation.ZInverse.Left,
+            variantIndex=OptFormation.VariantIndex.GroupClose
+        )
+
+    @staticmethod
+    def rotary_front_right_small():
+        return OptFormation(
+            value=OptFormation.Values.RotaryFrontRightSmall,
+            formationIndex=OptFormation.FormationIndex.RotaryFront,
+            zInverse=OptFormation.ZInverse.Right,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def rotary_front_right_medium():
+        return OptFormation(
+            value=OptFormation.Values.RotaryFrontRightMedium,
+            formationIndex=OptFormation.FormationIndex.RotaryFront,
+            zInverse=OptFormation.ZInverse.Right,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def rotary_front_left_small():
+        return OptFormation(
+            value=OptFormation.Values.RotaryFrontLeftSmall,
+            formationIndex=OptFormation.FormationIndex.RotaryFront,
+            zInverse=OptFormation.ZInverse.Left,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def rotary_front_left_medium():
+        return OptFormation(
+            value=OptFormation.Values.RotaryFrontLeftMedium,
+            formationIndex=OptFormation.FormationIndex.RotaryFront,
+            zInverse=OptFormation.ZInverse.Left,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def rotary_column():
+        return OptFormation(
+            value=OptFormation.Values.RotaryColumn,
+            formationIndex=OptFormation.FormationIndex.RotaryColumn,
+            zInverse=None,
+            variantIndex=None
+        )
+
+    # Aircraft formation constructors:
+    @staticmethod
+    def line_abreast_close():
+        return OptFormation(
+            value=OptFormation.Values.LineAbreastClose,
+            formationIndex=OptFormation.FormationIndex.LineAbreast,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def line_abreast_open():
+        return OptFormation(
+            value=OptFormation.Values.LineAbreastOpen,
+            formationIndex=OptFormation.FormationIndex.LineAbreast,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def line_abreast_group_close():
+        return OptFormation(
+            value=OptFormation.Values.LineAbreastClose,
+            formationIndex=OptFormation.FormationIndex.LineAbreast,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.GroupClose
+        )
+
+    @staticmethod
+    def trail_close():
+        return OptFormation(
+            value=OptFormation.Values.TrailClose,
+            formationIndex=OptFormation.FormationIndex.Trail,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def trail_open():
+        return OptFormation(
+            value=OptFormation.Values.TrailOpen,
+            formationIndex=OptFormation.FormationIndex.Trail,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def trail_group_close():
+        return OptFormation(
+            value=OptFormation.Values.TrailGroupClose,
+            formationIndex=OptFormation.FormationIndex.Trail,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.GroupClose
+        )
+
+    @staticmethod
+    def wedge_close():
+        return OptFormation(
+            value=OptFormation.Values.WedgeClose,
+            formationIndex=OptFormation.FormationIndex.Wedge,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def wedge_open():
+        return OptFormation(
+            value=OptFormation.Values.WedgeOpen,
+            formationIndex=OptFormation.FormationIndex.Wedge,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def wedge_group_close():
+        return OptFormation(
+            value=OptFormation.Values.WedgeGroupClose,
+            formationIndex=OptFormation.FormationIndex.Wedge,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.GroupClose
+        )
+
+    @staticmethod
+    def echelon_right_close():
+        return OptFormation(
+            value=OptFormation.Values.EchelonRightClose,
+            formationIndex=OptFormation.FormationIndex.EchelonRight,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def echelon_right_open():
+        return OptFormation(
+            value=OptFormation.Values.EchelonRightOpen,
+            formationIndex=OptFormation.FormationIndex.EchelonRight,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def echelon_right_group_close():
+        return OptFormation(
+            value=OptFormation.Values.EchelonRightGroupClose,
+            formationIndex=OptFormation.FormationIndex.EchelonRight,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.GroupClose
+        )
+
+    @staticmethod
+    def echelon_left_close():
+        return OptFormation(
+            value=OptFormation.Values.EchelonLeftClose,
+            formationIndex=OptFormation.FormationIndex.EchelonLeft,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def echelon_left_open():
+        return OptFormation(
+            value=OptFormation.Values.EchelonLeftOpen,
+            formationIndex=OptFormation.FormationIndex.EchelonLeft,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def echelon_left_group_close():
+        return OptFormation(
+            value=OptFormation.Values.EchelonLeftGroupClose,
+            formationIndex=OptFormation.FormationIndex.EchelonLeft,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.GroupClose
+        )
+
+    @staticmethod
+    def finger_four_close():
+        return OptFormation(
+            value=OptFormation.Values.FingerFourClose,
+            formationIndex=OptFormation.FormationIndex.FingerFour,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def finger_four_open():
+        return OptFormation(
+            value=OptFormation.Values.FingerFourOpen,
+            formationIndex=OptFormation.FormationIndex.FingerFour,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def finger_four_group_close():
+        return OptFormation(
+            value=OptFormation.Values.FingerFourGroupClose,
+            formationIndex=OptFormation.FormationIndex.FingerFour,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.GroupClose
+        )
+
+    @staticmethod
+    def spread_four_close():
+        return OptFormation(
+            value=OptFormation.Values.SpreadFourClose,
+            formationIndex=OptFormation.FormationIndex.SpreadFour,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def spread_four_open():
+        return OptFormation(
+            value=OptFormation.Values.SpreadFourOpen,
+            formationIndex=OptFormation.FormationIndex.SpreadFour,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def spread_four_group_close():
+        return OptFormation(
+            value=OptFormation.Values.SpreadFourGroupClose,
+            formationIndex=OptFormation.FormationIndex.SpreadFour,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.GroupClose
+        )
+
+    @staticmethod
+    def ww2_bomber_element_close():
+        return OptFormation(
+            value=OptFormation.Values.WW2_BomberElementClose,
+            formationIndex=OptFormation.FormationIndex.WW2_BomberElement,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def ww2_bomber_element_open():
+        return OptFormation(
+            value=OptFormation.Values.WW2_BomberElementOpen,
+            formationIndex=OptFormation.FormationIndex.WW2_BomberElement,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def ww2_bomber_element_height_seperation():
+        return OptFormation(
+            value=OptFormation.Values.WW2_BomberElementHeightSeperation,
+            formationIndex=OptFormation.FormationIndex.WW2_BomberElementHeightSeperation,
+            zInverse=None,
+            variantIndex=None
+        )
+
+    @staticmethod
+    def ww2_fighter_vic_close():
+        return OptFormation(
+            value=OptFormation.Values.WW2_FighterVicClose,
+            formationIndex=OptFormation.FormationIndex.WW2_FighterVic,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def ww2_fighter_vic_open():
+        return OptFormation(
+            value=OptFormation.Values.WW2_FighterVicOpen,
+            formationIndex=OptFormation.FormationIndex.WW2_FighterVic,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
+
+    @staticmethod
+    def modern_bomber_formation_close():
+        return OptFormation(
+            value=OptFormation.Values.ModernBomberFormationClose,
+            formationIndex=OptFormation.FormationIndex.ModernBomberFormation,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Close
+        )
+
+    @staticmethod
+    def modern_bomber_formation_open():
+        return OptFormation(
+            value=OptFormation.Values.ModernBomberFormationOpen,
+            formationIndex=OptFormation.FormationIndex.ModernBomberFormation,
+            zInverse=None,
+            variantIndex=OptFormation.VariantIndex.Open
+        )
 
 
 class OptRTBOnBingoFuel(Option):
